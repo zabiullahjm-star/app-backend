@@ -1,0 +1,38 @@
+import express from "express";
+import fetch from "node-fetch";
+import cors from "cors";
+
+const app = express();
+app.use(cors());
+app.use(express.json());
+
+// نرخ دستی دلار به افغانی (قابل تغییر)
+const USD_TO_AFN = 80;
+
+app.get("/api/rates", async (req, res) => {
+  try {
+    // نرخ USDT به تومان از سایت Tabdeal
+    const html = await fetch("https://tabdeal.org/usdt-price").then(r => r.text());
+    
+    // استخراج قیمت از HTML (الگوی بهبود یافته)
+    const match = html.match(/<span[^>]*class=["']price["'][^>]*>([^<]+)<\/span>/i);
+    const usdtToman = match ? parseFloat(match[1].replace(/[٬,]/g, "")) : null;
+    
+    // USDT ≈ 1 USD
+    const usdtUsd = 1;
+    const usdtAfn = usdtUsd * USD_TO_AFN;
+    
+    res.json({
+      USDT_USD: usdtUsd,
+      USDT_TOMAN: usdtToman,
+      USDT_AFN: usdtAfn,
+      source: "tabdeal.org"
+    });
+  } catch (err) {
+    console.error("Fetch error:", err);
+    res.status(500).json({ error: "Failed to fetch rates" });
+  }
+});
+
+const PORT = process.env.PORT || 3001;
+app.listen(PORT, () => console.log(Backend running on port ${PORT}));
